@@ -35,11 +35,12 @@ function formatDuration(sec) {
 // Отрисовывает страницу подкаста внутри container.
 // podcastId — id подкаста, для которого показываем детали.
 // navigate — функция для перехода на другую страницу (например, "Назад").
-function renderPodcastPage(container, podcastId, navigate) {
+function renderPodcastPage(container, podcastId, navigate, player) {
   let activeController = null;
   let nextEpisodePubDate = null;
   let hasMoreEpisodes = false;
   let isLoadingMore = false;
+  let podcastInfo = null; // сохраняем заголовок/обложку подкаста для передачи в плеер
 
   // ==== Базовая разметка на время загрузки ====
   container.innerHTML = `
@@ -74,6 +75,7 @@ function renderPodcastPage(container, podcastId, navigate) {
 
   // ==== Отрисовка "шапки" подкаста (картинка, название, издатель, описание) ====
   function renderHeader(podcast) {
+    podcastInfo = { title: podcast.title, image: podcast.image };
     headerContainer.innerHTML = "";
 
     const img = document.createElement("img");
@@ -127,14 +129,19 @@ function renderPodcastPage(container, podcastId, navigate) {
     item.appendChild(meta);
     item.appendChild(description);
 
-    // Простое встроенное аудио — полноценный плеер с перемоткой
-    // и "плавающей" панелью сделаем в следующем разделе
     if (episode.audio) {
-      const audio = document.createElement("audio");
-      audio.controls = true;
-      audio.src = episode.audio;
-      audio.className = "episode-audio";
-      item.appendChild(audio);
+      const playBtn = document.createElement("button");
+      playBtn.type = "button";
+      playBtn.className = "episode-play-btn";
+      playBtn.textContent = "▶ Слушать";
+
+      playBtn.addEventListener("click", () => {
+        // Передаём в общий плеер эпизод + информацию о подкасте
+        // (название/обложка), чтобы плеер мог их отобразить
+        player.playEpisode({ ...episode, podcast: podcastInfo });
+      });
+
+      item.appendChild(playBtn);
     }
 
     return item;

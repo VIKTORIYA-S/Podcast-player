@@ -1,26 +1,35 @@
 import { renderHomePage } from "./pages/homePage.js";
 import { renderPodcastPage } from "./pages/podcastPage.js";
+import { createPlayer } from "./player.js";
 
-const app = document.getElementById("app");
+const pageContent = document.getElementById("page-content");
+const playerBar = document.getElementById("player-bar");
 
-// cleanup-функция текущей страницы (если есть) —
-// вызывается перед тем, как показать другую страницу
+// Плеер создаётся один раз и живёт независимо от того,
+// какая страница сейчас отрисована в pageContent
+const player = createPlayer(playerBar);
+
+// cleanup-функция текущей страницы
 let currentCleanup = null;
 
 // navigate — единственная точка входа для смены "экрана".
 // view: "home" | "podcast"
 // params: дополнительные данные, например { id: "..." } для страницы подкаста
 function navigate(view, params = {}) {
-  // убираем за собой: отменяем запросы предыдущей страницы
   if (currentCleanup) {
     currentCleanup();
     currentCleanup = null;
   }
 
   if (view === "home") {
-    currentCleanup = renderHomePage(app, navigate);
+    currentCleanup = renderHomePage(pageContent, navigate);
   } else if (view === "podcast") {
-    currentCleanup = renderPodcastPage(app, params.id, navigate);
+    currentCleanup = renderPodcastPage(
+      pageContent,
+      params.id,
+      navigate,
+      player,
+    );
   } else {
     console.error("Неизвестный маршрут:", view);
   }
@@ -28,5 +37,3 @@ function navigate(view, params = {}) {
 
 // Открываем главную страницу при первой загрузке приложения
 navigate("home");
-
-

@@ -7,7 +7,11 @@
     <title>Podcast Player</title>
 </head>
 <body>
-    <div id="app"></div>
+    <!-- Сюда рендерятся "страницы" (главная / подкаст) — содержимое перезаписывается -->
+    <div id="page-content"></div>
+    
+    <!-- Плеер живёт здесь всегда, отдельно от страниц, и не перерисовывается при навигации -->
+    <div id="player-bar"></div>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
