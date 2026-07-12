@@ -85,9 +85,16 @@ input[type="search"]::placeholder {
     border-color: #6b46c1;
 }
 
+#list-heading {
+    font-size: 32px;
+    text-align: center;
+    color: #b9b9b9;
+    padding: 24px 0;
+}
+
 #status-message {
     text-align: center;
-    color: #666;
+    color: #bcbcbc;
     padding: 24px 0;
 }
 
