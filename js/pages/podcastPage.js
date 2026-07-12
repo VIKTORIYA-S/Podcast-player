@@ -1,36 +1,6 @@
 import { fetchPodcastById } from "../api.js";
-
-// Убирает HTML-теги из описания (Listen Notes часто присылает
-// описание с тегами вроде <p>, <a> и т.д.)
-function stripHtml(html) {
-  if (!html) return "";
-  return html.replace(/<[^>]*>/g, "").trim();
-}
-
-// Превращает миллисекунды в читаемую дату, например "10 июля 2026"
-function formatDate(pubDateMs) {
-  if (!pubDateMs) return "";
-  const date = new Date(pubDateMs);
-  return date.toLocaleDateString("ru-RU", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-// Превращает секунды в "чч:мм:сс" или "мм:сс"
-function formatDuration(sec) {
-  if (!sec) return "";
-  const hours = Math.floor(sec / 3600);
-  const minutes = Math.floor((sec % 3600) / 60);
-  const seconds = Math.floor(sec % 60);
-  const pad = (n) => String(n).padStart(2, "0");
-
-  if (hours > 0) {
-    return `${hours}:${pad(minutes)}:${pad(seconds)}`;
-  }
-  return `${minutes}:${pad(seconds)}`;
-}
+import { stripHtml, formatDate, formatDuration } from "../utils.js";
+import { isInPlaylist, addToPlaylist, removeFromPlaylist } from "../storage.js";
 
 // Отрисовывает страницу подкаста внутри container.
 // podcastId — id подкаста, для которого показываем детали.
@@ -129,6 +99,9 @@ function renderPodcastPage(container, podcastId, navigate, player) {
     item.appendChild(meta);
     item.appendChild(description);
 
+    const actions = document.createElement("div");
+    actions.className = "episode-actions";
+
     if (episode.audio) {
       const playBtn = document.createElement("button");
       playBtn.type = "button";
@@ -141,8 +114,32 @@ function renderPodcastPage(container, podcastId, navigate, player) {
         player.playEpisode({ ...episode, podcast: podcastInfo });
       });
 
-      item.appendChild(playBtn);
+      actions.appendChild(playBtn);
     }
+
+    // Кнопка "В плейлист" / "Убрать из плейлиста"
+    const playlistBtn = document.createElement("button");
+    playlistBtn.type = "button";
+    playlistBtn.className = "playlist-btn";
+
+    function updatePlaylistBtn() {
+      const inPlaylist = isInPlaylist(episode.id);
+      playlistBtn.textContent = inPlaylist ? "✓ В плейлисте" : "+ В плейлист";
+      playlistBtn.classList.toggle("in-playlist", inPlaylist);
+    }
+    updatePlaylistBtn();
+
+    playlistBtn.addEventListener("click", () => {
+      if (isInPlaylist(episode.id)) {
+        removeFromPlaylist(episode.id);
+      } else {
+        addToPlaylist({ ...episode, podcast: podcastInfo });
+      }
+      updatePlaylistBtn();
+    });
+
+    actions.appendChild(playlistBtn);
+    item.appendChild(actions);
 
     return item;
   }

@@ -1,3 +1,5 @@
+import { getPosition, savePosition, clearPosition } from "./storage.js";
+
 // ==== Вспомогательная функция: секунды -> "мм:сс" или "чч:мм:сс" ====
 function formatTime(seconds) {
   if (!isFinite(seconds) || seconds < 0) return "0:00";
@@ -23,6 +25,7 @@ function createPlayer(container) {
   const audio = new Audio();
   let currentEpisode = null;
   let isSeeking = false; // true, пока пользователь тащит/кликает по полосе прогресса
+  let lastSavedSecond = 0; // чтобы не писать в localStorage на каждый timeupdate
 
   // ==== Разметка плеера (создаётся один раз) ====
   container.innerHTML = `
@@ -79,10 +82,24 @@ function createPlayer(container) {
     toggleBtn.textContent = "▶";
   });
 
-  // ==== Обновление полосы прогресса и времени ====
+  // ==== Обновление полосы прогресса и времени + сохранение позиции ====
   audio.addEventListener("timeupdate", () => {
     if (isSeeking) return; // пока перематываем сами — не перетираем позицию
     updateProgressUI();
+
+    // Пишем в localStorage не каждую секунду, а раз в ~5 секунд,
+    // чтобы не дёргать хранилище слишком часто
+    const currentSecond = Math.floor(audio.currentTime);
+    if (currentEpisode && currentSecond - lastSavedSecond >= 5) {
+      savePosition(currentEpisode.id, audio.currentTime);
+      lastSavedSecond = currentSecond;
+    }
+  });
+
+  audio.addEventListener("pause", () => {
+    if (currentEpisode) {
+      savePosition(currentEpisode.id, audio.currentTime);
+    }
   });
 
   audio.addEventListener("loadedmetadata", () => {
@@ -93,6 +110,18 @@ function createPlayer(container) {
     toggleBtn.textContent = "▶";
     progressFill.style.width = "0%";
     currentTimeEl.textContent = "0:00";
+    // Эпизод прослушан полностью — сохранённая позиция больше не нужна,
+    // при следующем запуске он начнётся сначала
+    if (currentEpisode) {
+      clearPosition(currentEpisode.id);
+    }
+  });
+
+  // Сохраняем позицию, если пользователь закрывает вкладку/страницу во время прослушивания
+  window.addEventListener("beforeunload", () => {
+    if (currentEpisode && !audio.paused) {
+      savePosition(currentEpisode.id, audio.currentTime);
+    }
   });
 
   function updateProgressUI() {
@@ -129,7 +158,13 @@ function createPlayer(container) {
       return;
     }
 
+    // Перед переключением сохраняем позицию предыдущего эпизода
+    if (currentEpisode) {
+      savePosition(currentEpisode.id, audio.currentTime);
+    }
+
     currentEpisode = episode;
+    lastSavedSecond = 0;
 
     titleEl.textContent = episode.title || "Без названия";
     podcastEl.textContent = episode.podcast?.title || "";
@@ -146,7 +181,20 @@ function createPlayer(container) {
     container.classList.add("player-active");
     document.body.classList.add("has-player");
 
-    audio.play();
+    // Как только браузер узнает длительность файла, можно безопасно
+    // переставить currentTime — до этого момента браузер может его игнорировать
+    const resumePlayback = () => {
+      const savedSeconds = getPosition(episode.id);
+      // Отступаем на 10 секунд назад от сохранённой позиции,
+      // чтобы пользователь не потерял контекст
+      const resumeFrom = savedSeconds > 10 ? savedSeconds - 10 : 0;
+      if (resumeFrom > 0) {
+        audio.currentTime = resumeFrom;
+      }
+      audio.play();
+    };
+
+    audio.addEventListener("loadedmetadata", resumePlayback, { once: true });
   }
 
   return { playEpisode };
