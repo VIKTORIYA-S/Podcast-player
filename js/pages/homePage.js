@@ -17,12 +17,14 @@ function renderHomePage(container, navigate) {
   // ==== Разметка ====
   container.innerHTML = `
     <input type="search" id="search-input" placeholder="Поиск подкастов..." autocomplete="off" />
+     <h2 id="list-heading" class="list-heading">Рекомендуемые подкасты</h2>
     <div id="status-message"></div>
     <div id="podcast-list"></div>
     <button id="load-more-btn" type="button">Загрузить ещё</button>
   `;
 
   const searchInput = container.querySelector("#search-input");
+  const listHeading = container.querySelector("#list-heading");
   const statusMessage = container.querySelector("#status-message");
   const listContainer = container.querySelector("#podcast-list");
   const loadMoreBtn = container.querySelector("#load-more-btn");
@@ -155,10 +157,12 @@ function renderHomePage(container, navigate) {
     if (query === "") {
       currentMode = "best";
       currentPage = 1;
+      listHeading.textContent = "Рекомендуемые подкасты";
       loadBestPodcasts(currentPage, false);
     } else {
       currentMode = "search";
       currentOffset = 0;
+      listHeading.textContent = `Результаты поиска по запросу «${query}»`;
       loadSearchResults(query, currentOffset, false);
     }
   }, 400);
